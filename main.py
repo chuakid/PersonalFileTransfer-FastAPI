@@ -2,13 +2,25 @@ from datetime import datetime
 from secrets import token_urlsafe
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import (Body, FastAPI, File, Form, HTTPException, Request,
+                     UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
 
 import db
 import filestorage
 
 app = FastAPI()
+
+origins = [
+    "*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.put("/api/upload")
@@ -33,8 +45,9 @@ async def file_info(file_id: str):
 
 
 @app.post("/api/gettoken/{file_id}")
-async def get_token(file_id: str, password: str = Body(...)):
-    if not db.check_password(file_id, password):
+async def get_token(file_id: str, request: Request):
+    json = await request.json()
+    if not db.check_password(file_id, json["password"]):
         raise HTTPException(403, "Wrong password")
     token = token_urlsafe()  # generate token.
     db.add_token(file_id, token)  # add token to file document in db
